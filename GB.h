@@ -44,8 +44,10 @@ public:
     void set_clock_frequency();
     void request_interrupt(int interrupt);
     BYTE get_clock_frequency() const;
-
-
+    BYTE set_bit(BYTE addr, int position);
+    void service_interrupt(int interrupt);
+    void push_word_on_stack(WORD word);
+    BYTE reset_bit(BYTE addr, int position);
 
 private:
     BYTE cartridge_memory[0x200000];
@@ -63,6 +65,7 @@ private:
     bool MBC2;
     bool enable_ram;
     bool rom_banking;
+    bool master_interrupt;
 
     WORD program_counter;
     Register stack_pointer;

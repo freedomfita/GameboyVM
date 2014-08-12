@@ -310,7 +310,57 @@ void GB::enable_ram_bank(WORD address, BYTE data)
 
 void GB::check_interrupts()
 {
-    //do something
+    if (master_interrupt == true)
+    {
+        BYTE req = read_memory(0xFF0F);
+        BYTE enabled = read_memory(0xFFFF);
+        if (req > 0)
+        {
+            for (int i = 0; i < 5; i++) //just 5 possibilties
+            {
+                if (test_bit(req,i) == true)
+                {
+                    if (test_bit(enabled, i))
+                        service_interrupt(i);
+                }
+            }
+        }
+    }
+}
+
+void GB::service_interrupt(int interrupt)
+{
+    //interrupt routines
+    //V-Blank: 0x40
+    //LCD: 0x48
+    //TIMER: 0x50
+    //JOYPAD: 0x60
+    master_interrupt = false;
+    BYTE req = read_memory(0xFF0F);
+    req = reset_bit(req, interrupt);
+    write_address(0xFF0F,req);
+
+    //save current execution
+    push_word_on_stack(program_counter);
+
+    switch(interrupt)
+    {
+        case 0: program_counter = 0x40; break;
+        case 1: program_counter = 0x48; break;
+        case 2: program_counter = 0x50; break;
+        case 3: program_counter = 0x60; break;
+    }
+}
+
+void GB::push_word_on_stack(WORD word)
+{
+
+}
+
+BYTE GB::reset_bit(BYTE addr, int position)
+{
+    addr &= ~(1 << position);
+    return addr;
 }
 
 void GB::update_graphics(int cycles)
@@ -344,9 +394,17 @@ void GB::update_timers(int cycles)
     }
 }
 
+BYTE GB::set_bit(BYTE addr, int position)
+{
+    addr |= 1 << position;
+    return addr;
+}
+
 void GB::request_interrupt(int interrupt)
 {
-
+    BYTE req = read_memory(0xFF0F);
+    req = set_bit(req, interrupt);
+    write_address(0xFF0F, interrupt);
 }
 
 
