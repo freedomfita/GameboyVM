@@ -178,6 +178,10 @@ void GB::write_address(WORD address, BYTE data)
     {
         rom_mem[address] = 0;
     }
+    else if (address == 0xFF46)
+    {
+            do_DMA_transfer(data);
+    }
     else
     {
         rom_mem[address] = data;
@@ -367,12 +371,95 @@ BYTE GB::reset_bit(BYTE addr, int position)
     return addr;
 }
 
-bool GB::is_LCD_enabled() {
-    return true;
+bool GB::is_LCD_enabled() const{
+    return test_bit(read_memory(0xFF40),7);
+}
+
+void GB::draw_scanline() {
+
 }
 
 void GB::set_LCD_status() {
+    BYTE status = read_memory(0xFF41);
+    if (false == is_LCD_enabled())
+    {
+        // set mode to 1 during lcd disabled, and reset scanline
+        m_scanline_counter = 456;
+        rom_mem[0xFF44] = 0;
+        status &= 252;
+        status = set_bit(status, 0);
+        write_address(0xFF41, status);
+        return;
+    }
     
+    BYTE current_line = read_memory(0xFF44);
+    BYTE current_mode = status & 0x3;
+
+    BYTE mode = 0;
+    bool req_int = false;
+
+    // vblank mode, so set mode to 1
+    if (current_line >= 144)
+    {
+        mode = 1;
+        status = set_bit(status,0);
+        status = reset_bit(status, 1);
+        req_int = test_bit(status, 4);
+    }
+    else
+    {
+        int mode2_bounds = 456-80;
+        int mode3_bounds = mode2_bounds - 172;
+
+        // mode 2
+        if (m_scanline_counter >= mode2_bounds)
+        {
+            status = set_bit(status, 1);
+            status = reset_bit(status, 0);
+            req_int = test_bit(status, 5);
+        }
+        // mode 3
+        else if (m_scanline_counter >= mode3_bounds)
+        {
+            mode = 3;
+            status = set_bit(status,1);
+            status = set_bit(status,0);
+        }
+        else 
+        {
+            mode = 0;
+            status = reset_bit(status,1);
+            status = reset_bit(status,0);
+            req_int = test_bit(status,3);
+        }
+
+        // just entered a new mode, request interrupt
+        if (req_int && (mode != current_mode))
+            request_interrupt(1);
+
+        if (current_line == read_memory(0xFF45))
+        {
+            status = set_bit(status,2);
+            if (test_bit(status,6))
+                request_interrupt(1);
+        }
+        
+        else
+        {
+            status = reset_bit(status, 2);
+        }
+    
+        write_address(0xFF41, status);
+    }
+}
+
+void GB::do_DMA_transfer(BYTE data)
+{
+    WORD address = data << 8; // source address is data * 100
+    for (int i = 0; i < 0xA0; i++)
+    {
+        write_address(0xFE00+i, read_memory(address+i));
+    }
 }
 
 
@@ -389,7 +476,7 @@ void GB::update_graphics(int cycles)
     if (m_scanline_counter <= 0)
     {
         // move to next scanline
-        rom_memory[0xFF44]++;
+        rom_mem[0xFF44]++;
         BYTE current_line = read_memory(0xFF44);
 
         m_scanline_counter = 456;
@@ -403,7 +490,7 @@ void GB::update_graphics(int cycles)
             rom_mem[0xFF44] = 0;
 
         else if (current_line < 144)
-            draw_scan_line();
+            draw_scanline();
 
     }
 }

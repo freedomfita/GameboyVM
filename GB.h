@@ -48,9 +48,10 @@ public:
     void service_interrupt(int interrupt);
     void push_word_on_stack(WORD word);
     BYTE reset_bit(BYTE addr, int position);
-    void set_LCD_Status();
-    bool is_LCD_enabled();
-
+    void set_LCD_status();
+    bool is_LCD_enabled() const;
+    void draw_scanline();
+    void do_DMA_transfer(BYTE data);
 
 private:
     BYTE cartridge_memory[0x200000];
