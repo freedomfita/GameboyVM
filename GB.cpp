@@ -174,6 +174,10 @@ void GB::write_address(WORD address, BYTE data)
     {
         rom_mem[0xFF04] = 0;
     }
+    else if (address == 0xFF44)
+    {
+        rom_mem[address] = 0;
+    }
     else
     {
         rom_mem[address] = data;
@@ -363,9 +367,45 @@ BYTE GB::reset_bit(BYTE addr, int position)
     return addr;
 }
 
+bool GB::is_LCD_enabled() {
+    return true;
+}
+
+void GB::set_LCD_status() {
+    
+}
+
+
+// 0-153 visible scanlines
 void GB::update_graphics(int cycles)
 {
     //do something
+    set_LCD_status();
+    if (is_LCD_enabled())
+        m_scanline_counter -= cycles;
+    else
+        return;
+    
+    if (m_scanline_counter <= 0)
+    {
+        // move to next scanline
+        rom_memory[0xFF44]++;
+        BYTE current_line = read_memory(0xFF44);
+
+        m_scanline_counter = 456;
+
+        // vertical blank period
+        if (current_line == 144)
+            request_interrupt(0);
+
+        //if past scanline 153, reset to 0
+        else if (current_line > 153)    
+            rom_mem[0xFF44] = 0;
+
+        else if (current_line < 144)
+            draw_scan_line();
+
+    }
 }
 void GB::update_timers(int cycles)
 {

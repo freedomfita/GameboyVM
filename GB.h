@@ -48,6 +48,9 @@ public:
     void service_interrupt(int interrupt);
     void push_word_on_stack(WORD word);
     BYTE reset_bit(BYTE addr, int position);
+    void set_LCD_Status();
+    bool is_LCD_enabled();
+
 
 private:
     BYTE cartridge_memory[0x200000];
@@ -60,6 +63,7 @@ private:
     int timer_counter;// = 1024;
     int divider_counter;
     int divider_register;
+    int m_scanline_counter;
 
     bool MBC1;
     bool MBC2;
