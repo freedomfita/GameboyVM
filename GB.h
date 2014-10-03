@@ -52,6 +52,9 @@ public:
     bool is_LCD_enabled() const;
     void draw_scanline();
     void do_DMA_transfer(BYTE data);
+    void render_sprites();
+    void render_tiles();
+
 
 private:
     BYTE cartridge_memory[0x200000];
