@@ -395,6 +395,28 @@ void GB::draw_scanline() {
         render_sprites( );
 }
 
+/* Rendering Tile Information
+ * Background is 256x256 pixels, or 32x32 tiles
+ * We only display 160x144 pixels at a time
+ * Need to know which part of background to draw
+ * ie: which 160x144 of 256x256 do we draw
+ * ScrollX (0xFF42) - X Position of background to start drawing viewing area
+ * ScrollY (0xFF43) - Y Position of background to start drawing viewing area
+ * WindowX (0xFF4A) - X Position -7 of viewing area to start drawing window from
+ * WindowY (0xFF4B) - Y Position of viewing area to start drawing window from
+ * The -7 is necessary, so from upper left you'd do (7,0)
+ * The game actually decides when to draw the window.
+ *
+ * Once you know where to draw the background, decide what to draw
+ * Two Regions: 0x9800-0x9BFF and 0x9C00-0x9FFF
+ * Check Bit 3 of LCD Control Register for the region for the background
+ * Check Bit 6 of LCD Control Register for the region for the window
+ * Two Regions for Tile Data Select: 0x8000-0x8FFF and 0x8800-0x97FF
+ * 
+ *
+ */
+
+
 void GB::render_tiles( ) {
 
 }
