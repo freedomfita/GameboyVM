@@ -288,7 +288,8 @@ bool GB::test_bit(WORD address, int bit) const
 
 int GB::get_bit(BYTE byte, int bit) const
 {
-    return  (byte & (1 << bit)) >> bit;
+    return (byte >> bit) & 1;
+    //return  (byte & (1 << bit)) >> bit;
 }
 
 void GB::change_low_rom_bank(BYTE data)
