@@ -411,14 +411,52 @@ void GB::draw_scanline() {
  * Two Regions: 0x9800-0x9BFF and 0x9C00-0x9FFF
  * Check Bit 3 of LCD Control Register for the region for the background
  * Check Bit 6 of LCD Control Register for the region for the window
+ * Each byte in the memory region is a tile identifaction number to be drawn
+ * Use the ID number to look up tile data in video ram to know how to draw it
  * Two Regions for Tile Data Select: 0x8000-0x8FFF and 0x8800-0x97FF
+ * Check Bit 4 for the region 
+ * Each region is 4096 (0x1000) bytes of data that stores the tiles
+ * Each Tile is stored as 16 bytes, and each tile is 8x8 pixels
+ *      * * * * * * * *
+ *      * * * * * * * *
+ *      * * * * * * * *
+ *      * * * * * * * *
+ *      * * * * * * * *
+ *      * * * * * * * *
+ *      * * * * * * * *
+ *      * * * * * * * *
+ *
+ * So, each line of the tile requires two bytes to represent
+ * With two bits per pixel, which tells us the color
  * 
+ * Tile Data
+ * Background layout region identifies each tile in the current background
+ * that needs to be drawn. The tile ID# you get from the background layout is
+ * used to lookup the tile data in the tile data region. Each tile will take
+ * 16 bytes of memory, 2 bytes per line.
+ *
+ * There are only four possible color ids (00,01,10,11) mapped to 
+ * (white, light grey, dark grey, black)
+ * The palettes are not fixed, so a programmer can invert them to achieve
+ * special effects. Background tiles have one monochrome palette in memory
+ * Sprites can have two palettes, except color white is actually transparent
+ * Background Palette: 0xFF47
+ * Sprite Palattes: 0xFF48 and OxFF49
+ * Palette data is mapped as follows
+ * Bits 1-0 : 00
+ * Bits 2-3 : 01
+ * Bits 4-5 : 10
+ * Bits 6-7 : 11
+ *
+ * In this way, the tile data doesn't change to change colors, the palette does
+ *
+ *
  *
  */
 
 
 void GB::render_tiles( ) {
-
+    
 }
 
 void GB::render_sprites( ) {
