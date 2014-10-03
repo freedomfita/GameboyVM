@@ -56,6 +56,7 @@ GB::GB()
     //Which rom bank is loaded. not 0 because bank 0 is always present
     //Rom banking not used in MBC2
     current_ROM_bank = 1;
+
     
     memset(&ram_banks,0,sizeof(ram_banks));
     current_RAM_bank = 0;
@@ -285,6 +286,11 @@ bool GB::test_bit(WORD address, int bit) const
     return ((address) & (1 << bit ));
 }
 
+int GB::get_bit(BYTE byte, int bit) const
+{
+    return  (byte & (1 << bit)) >> bit;
+}
+
 void GB::change_low_rom_bank(BYTE data)
 {
     if (MBC2)
@@ -395,6 +401,10 @@ void GB::draw_scanline() {
         render_sprites( );
 }
 
+BYTE GB::get_lcd_control_register() {
+    return read_memory(0xFF40);
+}
+
 /* Rendering Tile Information
  * Background is 256x256 pixels, or 32x32 tiles
  * We only display 160x144 pixels at a time
@@ -456,7 +466,146 @@ void GB::draw_scanline() {
 
 
 void GB::render_tiles( ) {
+   
+    WORD tile_data = 0;
+    WORD background_memory = 0;
+    bool is_unsigned = true;
+
+    // Read memory to get draw locations
+    BYTE scrollX = read_memory(0xFF43);
+    BYTE scrollY = read_memory(0xFF42);
+    BYTE windowX = read_memory(0xFF4B) - 7;
+    BYTE windowY = read_memory(0xFF4A);
+
+    bool using_window = false;
+    // check if the window is enabled
+    BYTE lcd_control = get_lcd_control_register();
+    if (test_bit (lcd_control, 5)) {
+        // check if the current scanline we're drawing is within windowY position
+        if (windowY <= read_memory(0xFF44))
+            using_window = true;
+    }
+
+    // Check which tile data we're using
+    if (test_bit(lcd_control, 4)) {
+        tile_data = 0x8000;
+    } else {
+        // This area uses SIGNED bytes as tile identifiers
+        tile_data = 0x8800;
+        is_unsigned = false;
+    }
+
+    // Check which background memory we're using
+    if (false == using_window) {
+        //Not using window, check bit 3
+        if (test_bit(lcd_control, 3)) {
+            background_memory = 0x9C00;
+        } else {
+            background_memory = 0x9800;
+        }
+    } else {
+        // We're using window, check bit 6
+        if (test_bit(lcd_control, 6)) {
+            background_memory = 0x9C00;
+        } else {
+            background_memory = 0x9800;
+        }
+    }
+
+    BYTE y_pos = 0;
+    // y_pos is used to calculate which of 32 vertical tiles current scanline
+    // is drawing
     
+    if (!using_window) {
+        y_pos = scrollY + read_memory(0xFF44);
+    } else {
+        // Need to offset if using window
+        y_pos = read_memory(0xFF44 - windowY);
+    }
+
+    // Which of the 8 vertical pixels of the tile is the current scanline on
+    // divide y_pos by 8 then multiply it by 32
+    WORD tile_row = (((BYTE)(y_pos >> 3)) << 5);
+    
+    // Draw 160 horizontal pixels for current scanline
+    for (int pixel = 0; pixel < 160; pixel++) {
+        BYTE x_pos = pixel + scrollX;
+
+        // check if using window
+        if (using_window) {
+            if (pixel >= windowX) {
+                x_pos = pixel - windowX;
+            }
+        }
+
+        //which of the 32 horixontal tiles does x_pos fall within
+        WORD tile_column = (x_pos >> 3);
+        SIGNED_WORD tileID;
+
+        // get the tileID, can be signed or unsigned
+        WORD tile_address = background_memory + tile_row + tile_column;
+        if (is_unsigned) {
+            tileID = (BYTE) read_memory(tile_address);
+        } else {
+            tileID = (SIGNED_BYTE) read_memory(tile_address);
+        }
+
+        // Find where the tileID is in memory, use offset if signed
+        // The tileID is the tile number of where it resides in tile_data
+        WORD tile_location = tile_data;
+        if (is_unsigned) {
+            tile_location += (tileID << 4);
+        } else {
+            tile_location += ((tileID + 128) << 4);
+        }
+
+        // Find the vertical line we're on of the tile to get the tile data
+        // from memory
+        BYTE line = y_pos % 8;
+        line *= 2; //each vertical line is two bytes
+        BYTE data1 = read_memory(tile_location + line);
+        BYTE data2 = read_memory(tile_location + line + 1);
+
+        // pixel 0 in the tile -> 7 of data 1 and data 2
+        int color_bit = x_pos % 8;
+        color_bit -= 7;
+        color_bit *= -1;
+
+        // combine data 1 and 2 to get color id for this pixel in the tile
+        int color_num = get_bit(data2, color_bit);
+        color_num <<= 1;
+        color_num |= get_bit(data1, color_bit);
+
+        // color_num should be the id to get the color from the palette at 0xFF47
+        //TOIMPLEMENT: COLOR enum / get_color method, so this is currently
+        //commented out so it compiles
+        /*
+        COLOR color = get_color(color_num, 0xFF47);
+        int red = 0;
+        int green = 0;
+        int blue = 0;
+        
+        // setup RGB values (since we won't be using an actual gameboy
+        switch (color) {
+            case WHITE: red = 255; green = 255; blue = 255; break;
+            case LIGHT_GRAY: red = 0xCC; green = 0xCC; blue = 0xCC; break;
+            case DARK_GRAY: red = 0x77; green = 0x77; blue = 0x77; break;
+        }
+
+        int finalY = read_memory(0xFF44);
+
+        // Do one last check to make sure we're in the 160x144 bounds
+        if ((finalY<0) || (finalY>143) || (pixel<0) || (pixel>159)) {
+            continue;
+        }
+
+        //Everything looks good, set that data!
+        screen_data[pixel][finalY][0] = red;
+        screen_data[pixel][finalY][1] = green;
+        screen_data[pixel][finalY][2] = blue;
+        */
+    }
+
 }
 
 void GB::render_sprites( ) {

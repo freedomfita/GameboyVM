@@ -39,6 +39,7 @@ public:
     void change_ram_bank(BYTE data);
     void change_rom_ram_mode(BYTE data);
     bool test_bit(WORD address, int bit) const;
+    int get_bit(BYTE byte, int bit) const;
     void divide_register(int cycles);
     bool is_clock_enabled() const;
     void set_clock_frequency();
@@ -54,7 +55,7 @@ public:
     void do_DMA_transfer(BYTE data);
     void render_sprites();
     void render_tiles();
-
+    BYTE get_lcd_control_register();
 
 private:
     BYTE cartridge_memory[0x200000];
