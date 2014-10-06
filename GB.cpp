@@ -2,6 +2,72 @@
 #include <string.h>
 #include "GB.h"
 
+/* TODO
+ * NOTE: Sound is not implemented in the tutorial. Judging from the GB docs, these seem to be
+ * the relevant registers / memory locations and their function;
+ * See http://www.codeslinger.co.uk/pages/projects/gameboy/files/GB.pdf around line 40 for more detail
+ * on implementing their funcionality
+ *
+ * LOCATION (NAME): CONTENT
+ *
+ * FF10 (NR10) : Sound Mode 1 register, Sweep Register (R/W)
+ * Bit 6-4 - Sweep Time
+ * Bit 3 - Sweep Increase / Decrease 
+ * 0: Addition (frequency increases), 1: Subtraction(frequency decreases)
+ * Bit 2-0 - Number of sweep shift (n: 0-7)
+ *
+ * FF11 (NR11) : Sound Mode 1 register, Sound length / Wave pattern duty (R/W)
+ * Only bits 7-6 can be read
+ * Bit 7-6 - Wave Pattern Duty
+ * Bit 5-0 - Sound length data (t1: 0-63)
+ *
+ * FF12 (NR12) Sound Mode 1 register, Envelope (R/W)
+ * Bit 7-4 - Initial volume of envelope
+ * Bit 3 - Envelope UP/DOWN - 0: Attenuate, 1: Amplify
+ * Bit 2-0 - Number of envelope sweep (n:0-7) (if zero, stop envelope operation
+ *
+ * FF13 (NR13) Sound Mode 1 register, Frequency lo (W)
+ * Lower 8 bits of 11 bit frequency (x)
+ * Next 3 bits are in NR14($FF14) (bits 5-3)
+ *
+ * FF14 (NR14) Sound Mode 1 register. Frequency hi (R/W)
+ * Only Bit 6 can be read
+ * Bit 7 - Initial (when set, sound restarts)
+ * Bit 6 - Counter / consecutive selection
+ * If 0: Regardless of the length data in NR11 sound can be produced consecutively
+ * If 1: Sound is generated during the time period set by the length in NR11, after this period,
+ * the 1 ON flag (bit 0 of NR52) is reset
+ * Bit 5-3 (FF13's 3 bits of lower frequency)
+ * Bit 2-0 - Frequency's higher 3 bits
+ * 
+ * FF16 (NR21) Sound Mode 2 register, Sound Length, Wave Pattern Duty (R/W)
+ * Only bits 7-6 can be read
+ * Bit 7-6 - Wave Pattern Duty
+ * Bit 5-0 Sound length data (t1: 0-63)
+ * 
+ * FF17 (NR22) Sound Mode 2 register, envelope (R/W)
+ * Bit 7-4 - Initial volume of envelope
+ * Bit 3 - Envelope UP/DOWN, 0: Attenuate, 1: Amplify
+ * Bit 2-0 - Number of envelope sweep (n:0-7), if zero, stop envelope operation
+ * Initial volume of envelope is 0-$F, zero being no sound
+ *
+ * FF18 (NR23) Sound Mode 2 register, frequency lo data (W)
+ * Frequency's lower 8 bits of 11 bit data (x). Next 3 bits are in NR24
+ *
+ * FF19 (NR24) Sound Mode 2 register, frequency hi data (R/W)
+ * Only bit 6 can be read
+ * Bit 7 - Initial, when set, sound restarts
+ * Bit 6 - Counter / consecutive selection:
+ * If 0: Regardless of the length data in NR21, sound can be produced consecutively
+ * If 1: Sound is generated during the time period set by the length data in NR21. After this period,
+ * the sound 2 ON flag (bit 1 of NR52) is reset
+ * 
+ * WRITE INFO for sound mode registers 3 and 4
+ *
+ *
+ */
+
+
 
 // Notes
 // ROM bank 0 is fixed from 0x0000 to 0x3FFF, so any other loaded
@@ -924,6 +990,7 @@ void GB::request_interrupt(int interrupt)
 
 
 //check bit 2 to see if timer is enabled
+//Double check docs, but change this method since this is redundant..
 bool GB::is_clock_enabled() const
 {
     return test_bit(read_memory(TIMER_CONTROLLER), 2) ? true : false;
