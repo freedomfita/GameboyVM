@@ -609,8 +609,118 @@ void GB::render_tiles( ) {
 
 }
 
+/** TO DO: bit-blip screen_data : may want to use glDrawPixels
+ * Sprite data is in 0x8000 - 0x8FFF, so it's all unsigned
+ * Forty tiles in that memory region, scan through all and
+ * check attributes to find where they are rendered
+ * Sprite attribute table is in memory region 0xFE00-0xFE9F
+ * Each sprite has 4 bytes of attributes
+ * 0: Sprite Y Position - Y position on the viewing display minus 16
+ * 1: Sprite X Position - X position on the viewing display minus 8
+ * 2: Pattern Number - Sprite identifier for looking up sprite data
+ * in the memory region 0x8000-0x8FFF
+ *
+ * 3: Attributes: 
+ * Bit7 - Sprite to Background Priority
+ * Bit6 - Y flip
+ * Bit5 - X flip
+ * Bit4 - Palette number
+ * Bit3 - Not used in standard gameboy
+ * Bit2-0 - Not used in standard gameboy
+ *
+ * Sprite to Background Priority - If 0, sprite is rendered above the 
+ * background and the window. If 1, sprite is hidden behind background and
+ * window unless background or window is white, then it is rendered on top
+ *
+ * Y Flip - If set then sprite is mirrored vertically, ie upside down
+ * X Flip - If set then sprite is mirrored horizontallly, ie backwards
+ * Palette Number - Sprites have two palettes. If 0, it's palette 0xFF48
+ * if it's 1, then use palette 0xFF49
+ *
+ * Recommended for handling the flipping is to read sprite data in backwards
+ *
+ */ 
 void GB::render_sprites( ) {
+    bool use8by16 = false;
+    BYTE lcd_control = get_lcd_control_register();
+    if (test_bit(lcd_control, 2))
+        use8by16 = true;
 
+    for (int sprite = 0; sprite < 40; sprite++) {
+        //Sprite has 4 bytes in the sprite attribute table
+        BYTE index = sprite << 2;
+        BYTE y_pos = read_memory(0xFE00+index) - 16;
+        BYTE x_pos = read_memory(0xFE00+index+1) - 8;
+        BYTE tile_location = read_memory(0xFE00+index+2);
+        BYTE attributes = read_memory(0xFE00+index+3);
+
+        bool y_flip = test_bit(attributes, 6);
+        bool x_flip = test_bit(attributes, 5);
+        int scanline = read_memory(0xFF44);
+
+        int y_size = 8;
+        if (use8by16)
+            y_size = 16;
+
+        // check if sprite intercepts with scanline
+        if ((scanline >= y_pos) && (scanline < (y_pos + y_size))) {
+            int line = scanline - y_pos;
+            //read the sprite in backwards in the y axis
+            if (y_flip) {
+                line -= y_size;
+                line *= -1;
+            }
+            
+            line *= 2; //same as tiles
+            WORD data_address = (0x8000 + (tile_location * 16)) + line;
+            BYTE data1 = read_memory( data_address );
+            BYTE data2 = read_memory( data_address + 1 );
+
+            // Read right to left as pixel 0 is bit 7 in  color data, 
+            // pixel 1 is bit 6, etc..
+            for (int tile_pixel = 7; tile_pixel >= 0; tile_pixel--) {
+                int color_bit = tile_pixel;
+                
+                //read backwards if x_clip
+                if (x_flip) {
+                    color_bit -=7;
+                    color_bit *= -1;
+                }
+
+                // Do the same as for tiles
+                int color_num = get_bit(data2, color_bit);
+                color_num <<= 1;
+                color_num |= get_bit(data1, color_bit);
+
+                WORD color_address = (test_bit(attributes, 4)) ? 0xFF49 : 0xFF48;
+                color_t col = get_color(color_num, color_address);
+
+                //White is transparent for sprites
+                if (col == WHITE)
+                    continue;
+                
+                int red = 0;
+                int green = 0;
+                int blue = 0;
+                
+                switch (col) {
+                    case LIGHT_GRAY: red = 0xCC; green = 0xCC; blue = 0xCC; break;
+                    case DARK_GRAY: red = 0x77; green = 0x77; blue = 0x77; break;
+                }
+                int x_pix = 0 - tile_pixel + 7;
+                int pixel = x_pos + x_pix;
+
+                //sanity check
+                if ((scanline < 0) || (scanline > 143) || (pixel < 0) || (pixel > 159)) {
+                    continue;
+                }
+                
+                screen_data[pixel][scanline][0] = red;
+                screen_data[pixel][scanline][1] = green;
+                screen_data[pixel][scanline][2] = blue;
+            }
+        }
+    }
 }
 
 //Method to grab the color using the colorID and the palette
