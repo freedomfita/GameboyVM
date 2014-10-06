@@ -17,6 +17,7 @@ using std::string;
 //CPU clock speed runs at 4194304 Hz
 
 #define CLOCKSPEED 4194304 ;
+enum color_t {WHITE=0, LIGHT_GRAY=1, DARK_GRAY=2, BLACK=3};
 
 class GB
 {
@@ -56,6 +57,8 @@ public:
     void render_sprites();
     void render_tiles();
     BYTE get_lcd_control_register();
+    color_t get_color(BYTE color_num, WORD address) const;
+
 
 private:
     BYTE cartridge_memory[0x200000];
@@ -75,6 +78,9 @@ private:
     bool enable_ram;
     bool rom_banking;
     bool master_interrupt;
+
+    
+
 
     WORD program_counter;
     Register stack_pointer;

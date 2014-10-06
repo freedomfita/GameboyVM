@@ -580,8 +580,8 @@ void GB::render_tiles( ) {
         // color_num should be the id to get the color from the palette at 0xFF47
         //TOIMPLEMENT: COLOR enum / get_color method, so this is currently
         //commented out so it compiles
-        /*
-        COLOR color = get_color(color_num, 0xFF47);
+        
+        color_t color = get_color(color_num, 0xFF47);
         int red = 0;
         int green = 0;
         int blue = 0;
@@ -604,13 +604,50 @@ void GB::render_tiles( ) {
         screen_data[pixel][finalY][0] = red;
         screen_data[pixel][finalY][1] = green;
         screen_data[pixel][finalY][2] = blue;
-        */
+        
     }
 
 }
 
 void GB::render_sprites( ) {
 
+}
+
+//Method to grab the color using the colorID and the palette
+//This palette can change, so colors will be mapped differently
+color_t GB::get_color(BYTE color_num, WORD address) const {
+    color_t res = WHITE;
+    BYTE palette = read_memory(address);
+    int high = 0;
+    int low = 0;
+
+    // Create the mapping of the color_num to the palette
+    switch (color_num) {
+        case 0: high = 1; low = 0; break;
+        case 1: high = 3; low = 2; break;
+        case 2: high = 5; low = 4; break;
+        case 3: high = 7; low = 6; break;
+    }
+
+    //now, get the corresponding values
+    //I feel like there's a better way to do this whole method
+    //but for now just roll with it.
+    //extract the high bit, shift it once, then 
+    //or it with the low bit
+    int color = 0;
+    color = get_bit(palette, high) << 1;
+    color |= get_bit(palette, low);
+
+    //now map to enum
+    //At this point enum is just for readability
+    switch(color) {
+        case 0: res = WHITE; break;
+        case 1: res = LIGHT_GRAY; break;
+        case 2: res = DARK_GRAY; break;
+        case 3: res = BLACK; break;
+    }
+
+    return res;
 }
 
 void GB::set_LCD_status() {
