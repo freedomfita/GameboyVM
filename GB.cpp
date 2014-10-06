@@ -72,6 +72,9 @@
 // Notes
 // ROM bank 0 is fixed from 0x0000 to 0x3FFF, so any other loaded
 // ROM banks will be in 0x4000 to 0x7FFF
+// Starting to piece together information from the GB manual and http://problemkaputt.de/pandocs.htm
+// The pandocs have more detailed information, and can help me to implement the sound controller
+
 
 GB::GB()
 {
@@ -83,47 +86,51 @@ GB::GB()
     fclose(game_file);
     std::cout << "Finished Loading game\n";
 
+    //set cpu regs
     regAF.reg = 0x01B0;
     regBC.reg = 0x0013;
     regDE.reg = 0x00D8;
     regHL.reg = 0x014D;
 
+    //Set stack pointer
     stack_pointer.reg=0xFFFE;
 
     current_frequency = 4096;
     timer_counter = 1024;
 
-    rom_mem[0xFF05] = 0x00;
-    rom_mem[0xFF06] = 0x00;
-    rom_mem[0xFF07] = 0x00;
-    rom_mem[0xFF10] = 0x80;
-    rom_mem[0xFF11] = 0xBF;
-    rom_mem[0xFF12] = 0xF3;
-    rom_mem[0xFF14] = 0xBF;
-    rom_mem[0xFF16] = 0x3F;
-    rom_mem[0xFF17] = 0x00;
-    rom_mem[0xFF19] = 0xBF;
-    rom_mem[0xFF1A] = 0x7F;
-    rom_mem[0xFF1B] = 0xFF;
-    rom_mem[0xFF1C] = 0x9F;
-    rom_mem[0xFF1E] = 0xBF;
-    rom_mem[0xFF20] = 0xFF;
-    rom_mem[0xFF21] = 0x00;
-    rom_mem[0xFF22] = 0x00;
-    rom_mem[0xFF23] = 0xBF;
-    rom_mem[0xFF24] = 0x77;
-    rom_mem[0xFF25] = 0xF3;
-    rom_mem[0xFF26] = 0xF1;
-    rom_mem[0xFF40] = 0x91;
-    rom_mem[0xFF42] = 0x00;
-    rom_mem[0xFF43] = 0x00;
-    rom_mem[0xFF45] = 0x00;
-    rom_mem[0xFF47] = 0xFC;
-    rom_mem[0xFF48] = 0xFF;
-    rom_mem[0xFF49] = 0xFF;
-    rom_mem[0xFF4A] = 0x00;
-    rom_mem[0xFF4B] = 0x00;
-    rom_mem[0xFFFF] = 0x00;
+    //Boot Sequence, set register values
+    rom_mem[0xFF05] = 0x00; // TIMA
+    rom_mem[0xFF06] = 0x00; // TMA
+    rom_mem[0xFF07] = 0x00; // TAC
+    rom_mem[0xFF10] = 0x80; // NR10
+    rom_mem[0xFF11] = 0xBF; // NR11
+    rom_mem[0xFF12] = 0xF3; // NR12
+    rom_mem[0xFF14] = 0xBF; // NR14
+    rom_mem[0xFF16] = 0x3F; // NR21
+    rom_mem[0xFF17] = 0x00; // NR22
+    rom_mem[0xFF19] = 0xBF; // NR24
+    rom_mem[0xFF1A] = 0x7F; // NR30
+    rom_mem[0xFF1B] = 0xFF; // NR31
+    rom_mem[0xFF1C] = 0x9F; // NR32
+    rom_mem[0xFF1E] = 0xBF; // NR33
+    rom_mem[0xFF20] = 0xFF; // NR41
+    rom_mem[0xFF21] = 0x00; // NR42
+    rom_mem[0xFF22] = 0x00; // NR43
+    rom_mem[0xFF23] = 0xBF; // NR44
+    rom_mem[0xFF24] = 0x77; // NR50
+    rom_mem[0xFF25] = 0xF3; // NR51
+    rom_mem[0xFF26] = 0xF1; // NR52
+    rom_mem[0xFF40] = 0x91; // LCDC
+    rom_mem[0xFF42] = 0x00; // SCY
+    rom_mem[0xFF43] = 0x00; // SCX
+    rom_mem[0xFF45] = 0x00; // LYC
+    rom_mem[0xFF47] = 0xFC; // BGP
+    rom_mem[0xFF48] = 0xFF; // 0BG0
+    rom_mem[0xFF49] = 0xFF; // 0BG1
+    rom_mem[0xFF4A] = 0x00; // WY
+    rom_mem[0xFF4B] = 0x00; // WX
+    rom_mem[0xFFFF] = 0x00; // IE
+    //Set program counter
     program_counter = 0x100;
     //Which rom bank is loaded. not 0 because bank 0 is always present
     //Rom banking not used in MBC2
