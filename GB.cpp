@@ -16,6 +16,12 @@ GB::GB()
     fread(cartridge_memory, 1, 0x200000, game_file);
     fclose(game_file);
     std::cout << "Finished Loading game\n";
+
+    regAF.reg = 0x01B0;
+    regBC.reg = 0x0013;
+    regDE.reg = 0x00D8;
+    regHL.reg = 0x014D;
+
     stack_pointer.reg=0xFFFE;
 
     current_frequency = 4096;

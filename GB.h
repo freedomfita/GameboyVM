@@ -3,7 +3,7 @@
 using std::cout;
 using std::endl;
 
-#include "CPU.h"
+
 #include <string.h>
 #include <string>
 using std::string;
@@ -11,6 +11,12 @@ using std::string;
 #define TIMER 0xFF05
 #define TIMER_MODULATOR 0xFF06
 #define TIMER_CONTROLLER 0xFF07
+
+#define FLAG_Z 7;
+#define FLAG_N 6;
+#define FLAG_H 5;
+#define FLAG_C 4;
+
 //Timer controller has 4 frequencies to set
 //the timer to count up at
 //4096, 262144, 65536, 16384 Hz
@@ -18,6 +24,22 @@ using std::string;
 
 #define CLOCKSPEED 4194304 ;
 enum color_t {WHITE=0, LIGHT_GRAY=1, DARK_GRAY=2, BLACK=3};
+
+typedef unsigned char BYTE;
+typedef char SIGNED_BYTE;
+typedef unsigned short WORD;
+typedef signed short SIGNED_WORD;
+
+union Register
+{
+    WORD reg;
+    struct
+    {
+        BYTE low;
+        BYTE high;
+    };
+};
+
 
 class GB
 {
@@ -79,7 +101,10 @@ private:
     bool rom_banking;
     bool master_interrupt;
 
-    
+    Register regAF;
+    Register regBC;
+    Register regDE;
+    Register regHL;
 
 
     WORD program_counter;
